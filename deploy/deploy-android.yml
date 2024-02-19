@@ -1,0 +1,67 @@
+trigger: none
+
+parameters:
+  - name: Environment
+    type: string
+    default: production
+    values:
+      - test
+      - production
+
+variables:
+  - name: APP_DIR
+    value: ExpoBuildTest
+  - name: NODE_ENV
+    value: ${{ parameters.Environment }}
+
+stages:
+  - stage: Build
+    jobs:
+      - job: Build
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - checkout: self
+            clean: true
+            fetchDepth: 1
+            submodules: recursive
+            lfs: true
+          - task: NodeTool@0
+            displayName: Set Node Version to 20.x
+            inputs:
+              versionSpec: '20.x'
+          - task: JavaToolInstaller@0
+            inputs:
+              versionSpec: 17
+              jdkArchitectureOption: x64
+              jdkSourceOption: PreInstalled
+          - task: Npm@1
+            inputs:
+              command: install
+              workingDir: $(APP_DIR)
+          - task: Bash@3
+            displayName: Create expo prebuild files
+            inputs:
+              targetType: 'inline'
+              workingDirectory: $(APP_DIR)
+              script: |
+                # provide the variables to the prebuild command
+                echo $NODE_ENV
+                npx --yes expo prebuild -p android --clean
+          - task: Gradle@2
+            displayName: 'Build AAB'
+            inputs:
+              gradleWrapperFile: '$(APP_DIR)/android/gradlew'
+              workingDirectory: '$(APP_DIR)/android/'
+              tasks: ':app:bundleRelease'
+          - task: CopyFiles@2
+            displayName: Copy AAB
+            inputs:
+              SourceFolder: $(APP_DIR)/android/app/build/outputs
+              contents: '**/*.aab'
+              targetFolder: $(build.artifactStagingDirectory)/build/android
+              overWrite: true
+              flattenFolders: true
+          - publish: '$(Build.ArtifactStagingDirectory)/build/android'
+            displayName: Publish build
+            artifact: appBuild
