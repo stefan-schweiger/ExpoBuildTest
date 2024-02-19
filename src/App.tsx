@@ -3,14 +3,12 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { useEffect } from 'react';
 
-import { test } from '@/test';
-
 export default function App() {
-  useEffect(() => test(), []);
+  useEffect(() => console.log(process.env.EXPO_PUBLIC_MY_VAR), []);
 
   return (
     <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
+      <Text>Open up App.tsx to start working on your app! {process.env.EXPO_PUBLIC_MY_VAR}</Text>
       <StatusBar style="auto" />
     </View>
   );
